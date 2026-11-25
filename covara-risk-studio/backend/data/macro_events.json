@@ -1,0 +1,368 @@
+[
+ {
+  "date": "2024-11-13",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2024/11_sched.htm"
+ },
+ {
+  "date": "2024-12-11",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2024/12_sched.htm"
+ },
+ {
+  "date": "2024-12-18",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-01-15",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/01_sched.htm"
+ },
+ {
+  "date": "2025-01-29",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-02-12",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/02_sched.htm"
+ },
+ {
+  "date": "2025-03-12",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/03_sched.htm"
+ },
+ {
+  "date": "2025-03-19",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-04-10",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/04_sched.htm"
+ },
+ {
+  "date": "2025-05-07",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-05-13",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/05_sched.htm"
+ },
+ {
+  "date": "2025-06-11",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/06_sched.htm"
+ },
+ {
+  "date": "2025-06-18",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-07-15",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/07_sched.htm"
+ },
+ {
+  "date": "2025-07-30",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-08-12",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/08_sched.htm"
+ },
+ {
+  "date": "2025-09-11",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/09_sched.htm"
+ },
+ {
+  "date": "2025-09-17",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-10-24",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/10_sched.htm"
+ },
+ {
+  "date": "2025-10-29",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-12-10",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2025-12-18",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2025/12_sched.htm"
+ },
+ {
+  "date": "2026-01-13",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/01_sched.htm"
+ },
+ {
+  "date": "2026-01-28",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2026-02-13",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/02_sched.htm"
+ },
+ {
+  "date": "2026-03-11",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/03_sched.htm"
+ },
+ {
+  "date": "2026-03-18",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2026-04-10",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/04_sched.htm"
+ },
+ {
+  "date": "2026-04-29",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2026-05-12",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/05_sched.htm"
+ },
+ {
+  "date": "2026-06-10",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/06_sched.htm"
+ },
+ {
+  "date": "2026-06-17",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2026-07-14",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/07_sched.htm"
+ },
+ {
+  "date": "2026-07-29",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2026-08-12",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/08_sched.htm"
+ },
+ {
+  "date": "2026-09-11",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/09_sched.htm"
+ },
+ {
+  "date": "2026-09-16",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2026-10-14",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/10_sched.htm"
+ },
+ {
+  "date": "2026-10-28",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2026-11-10",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/2026/11_sched.htm"
+ },
+ {
+  "date": "2026-12-09",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2026-12-10",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-01-13",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-01-27",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2027-02-11",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-03-10",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-03-17",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2027-04-13",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-04-28",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2027-05-12",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-06-09",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2027-06-10",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-07-14",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-07-28",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2027-08-11",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-09-14",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-09-15",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2027-10-14",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-10-27",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ },
+ {
+  "date": "2027-11-10",
+  "type": "cpi",
+  "label": "US-Inflationsdaten",
+  "source": "https://www.bls.gov/schedule/news_release/cpi.htm"
+ },
+ {
+  "date": "2027-11-17",
+  "type": "fomc",
+  "label": "Fed-Zinsentscheid",
+  "source": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+ }
+]

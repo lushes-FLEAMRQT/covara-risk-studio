@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 26 26%22%3E%3Ccircle cx=%2213%22 cy=%2213%22 r=%2212%22 fill=%22white%22 stroke=%22black%22 stroke-width=%221.5%22/%3E%3Ccircle cx=%228.5%22 cy=%2217.5%22 r=%223%22 fill=%22%23e5484d%22/%3E%3Ccircle cx=%2214.5%22 cy=%2211.5%22 r=%222%22 fill=%22%232f5bff%22/%3E%3Ccircle cx=%2218.5%22 cy=%227.5%22 r=%221.5%22 fill=%22%2300a67e%22/%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Studio · Covara</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css">
+<script src="/static/core.js"></script>
+</head>
+<body>
+<div id="app" class="shell">
+<aside class="side">
+  <a class="logo" href="/" aria-label="Covara Startseite"><svg width="24" height="24" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="12" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8.5" cy="17.5" r="3" fill="var(--bad)"/><circle cx="14.5" cy="11.5" r="2" fill="var(--g)"/><circle cx="18.5" cy="7.5" r="1.5" fill="var(--t)"/></svg>Covara</a>
+  <nav class="nav" aria-label="Bereiche">
+    <a href="#depot"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Depot laden</a>
+    <a href="#portfolio"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M9 7V5h6v2"/></svg>Portfolio</a>
+    <a href="#risiko"><svg viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M5 20c2-9 4-14 7-14s5 5 7 14"/><path d="M8 20v-4"/></svg>Risiko</a>
+    <a href="#vola"><svg viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="3"/><path d="M8.5 2.5v1.2M2.5 8.5h1.2M4.3 4.3l.9.9M12.7 4.3l-.9.9"/><path d="M8 20h9.5a3.5 3.5 0 0 0 .4-7 5 5 0 0 0-9.4-.8A4 4 0 0 0 8 20z"/></svg>Risiko-Wetter</a>
+    <a href="#stress"><svg viewBox="0 0 24 24"><path d="M3 5l6 8 4-4 8 11"/></svg>Stresstests</a>
+    <a href="#einstellungen"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>Einstellungen</a>
+  </nav>
+  <div class="sfoot">
+    <div class="sacc"><span class="hide-m">Demo-Zugang</span><button class="mt" type="button" aria-label="Dunkelmodus einschalten" title="Dunkelmodus einschalten"><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg></button></div>
+    <button class="btn gh" id="out">Abmelden</button>
+  </div>
+</aside>
+
+<main class="content">
+  <div class="tool">
+    <div><h1 id="ptitle">Übersicht</h1><p class="small src" id="src" aria-live="polite">Kurse werden geladen …</p></div>
+    <div class="ctl">
+      <div class="f dv"><span>Depotwert</span><b id="gv">–</b></div>
+      <a class="f dv rlink" href="#einstellungen" title="In den Einstellungen ändern"><span>Risikomessung</span><b id="gr">–</b></a>
+    </div>
+  </div>
+
+  <div class="loading" id="load">
+    <h2 id="load-h">Dein Depot wird geladen …</h2>
+    <p class="mut" id="load-p">Covara lädt zwei Jahre Kurse von Yahoo Finance.</p>
+    <button class="btn" id="retry" hidden>Erneut versuchen</button>
+  </div>
+
+  <section class="page" data-page="depot" hidden>
+    <h2 class="find">Depot-Quelle</h2>
+    <div class="two">
+      <div class="panel src-card">
+        <div class="ph"><h3>Depot importieren</h3></div>
+        <p class="mut">Broker-Export, Depotauszug oder Screenshot. Claude liest die Positionen aus, Kurse kommen von Yahoo Finance. Aktien und ETFs aller Börsen.</p>
+        <label class="drop" id="imp-drop" for="imp-f"><input id="imp-f" type="file" multiple accept=".csv,.txt,.tsv,.xlsx,.xlsm,.pdf,.png,.jpg,.jpeg,.webp,.gif">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          <b>Dateien wählen</b><span>oder hierher ziehen</span><span class="small">CSV, Excel, PDF, PNG, JPG · bis 5 Dateien, je 10 MB</span></label>
+        <p class="small bsp">Beispieldateien zum Testen: <a href="/static/beispiele/depot-vorlage.csv" download>CSV-Vorlage</a> · <a href="/static/beispiele/depot-tabelle.xlsx" download>Excel</a> · <a href="/static/beispiele/depotauszug.pdf" download>PDF-Depotauszug</a> · <a href="/static/beispiele/depot-screenshot.png" download>Screenshot</a></p>
+        <ul class="imp-list" id="imp-list"></ul>
+        <button class="btn" id="imp-go" style="justify-self:start" disabled>Mit Claude auslesen</button>
+        <div class="err" id="imp-err" role="alert"></div>
+      </div>
+      <div class="panel src-card">
+        <div class="ph"><h3>Demo-Portfolio</h3></div>
+        <p class="mut">8 bis 12 zufällige Aktien aus dem S&amp;P 500, zufällig gewichtet, Gesamtwert 65.000 bis 100.000 €.</p>
+        <ul class="warn"><li style="--c:var(--t)">echte Kurse der letzten zwei Jahre</li><li style="--c:var(--g)">Stückzahlen zum aktuellen Kurs in Euro</li><li style="--c:var(--bad)">jedes Mal ein anderes Depot</li></ul>
+        <button class="btn" id="demo-pf" style="justify-self:start">Demo-Portfolio erstellen</button>
+        <p class="small" id="dp-now"></p>
+        <div class="err" id="dp-err" role="alert"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" data-page="portfolio" hidden>
+    <div class="panel vd">
+      <div class="vd-t">
+        <div class="vd-b"><span class="amp" id="o-amp"></span><a class="wb" id="o-wb" href="#vola" title="Zum Risiko-Wetter"></a></div>
+        <h2 class="find" id="o-h">–</h2>
+        <p class="mut" id="o-ret"></p>
+        <a class="btn gh" href="#depot" style="justify-self:start">Anderes Depot laden</a>
+      </div>
+      <div class="vd-c" id="o-cmp"></div>
+    </div>
+    <div class="ph sec"><h3>Deine 3 wichtigsten Punkte</h3><span class="small">sortiert nach Wirkung in Euro</span></div>
+    <div class="lvs" id="o-lv"></div>
+    <div class="ph sec"><h3>Was die Zahlen bedeuten</h3><span class="small" id="o-mh"></span></div>
+    <div class="means" id="o-m"></div>
+    <div class="t21">
+      <div class="panel"><div class="ph"><h3>Wertverlauf</h3><span class="small">Zwei Jahre, Kurse von Yahoo Finance in Euro</span></div><div class="fig"><svg id="o-eq" role="img" aria-label="Wertverlauf Portfolio und S&amp;P 500"></svg></div></div>
+      <div class="panel">
+        <div class="ph"><h3>Risikoklasse</h3><span class="small">Skala 1 bis 7</span></div>
+        <div class="score" id="o-sc"></div>
+        <p id="o-sct"></p>
+        <p class="small">Eingeteilt nach der Schwankung pro Jahr, so wie im Basisinformationsblatt von Fonds und ETFs.</p>
+      </div>
+    </div>
+    <div class="t21">
+      <div class="panel scroll"><div class="ph"><h3>Positionen</h3><span class="small" id="p-h"></span></div><table class="tbl hold"><thead><tr><th>Aktie</th><th class="l hide-s">Sektor</th><th>Stück</th><th class="hide-s">Kurs</th><th>Wert</th><th>Anteil</th></tr></thead><tbody id="p-t"></tbody><tfoot id="p-f"></tfoot></table>
+        <p class="small" id="p-src"></p></div>
+      <div class="panel"><h3>Sektoren</h3><div class="rows" id="p-s"></div><p class="small">Kurse von Yahoo Finance, in Euro umgerechnet.</p></div>
+    </div>
+    <div class="ph sec"><h3>Kennzahlen</h3></div>
+    <div class="kpis" id="k-k"></div>
+    <div class="panel"><div class="ph"><h3>Rückschläge vom Höchststand</h3><span class="small">Drawdown in %</span></div><div class="fig" style="min-height:240px"><svg id="k-dd" role="img" aria-label="Drawdown-Verlauf"></svg></div></div>
+    <details class="prof"><summary>Für Profis</summary><div class="prof-b"><div class="kpis" id="k-p"></div></div></details>
+    <p class="small disc">Hebel zeigen, was eine Änderung bewirken würde. Das ist keine Anlageberatung.</p>
+  </section>
+
+  <section class="page" data-page="risiko" hidden>
+    <div class="jump" id="r-jump" role="group" aria-label="Abschnitte"><button type="button" data-j="r-verlust">Verlust</button><button type="button" data-j="r-aktien">Aktien</button><button type="button" data-j="r-faktoren">Faktoren</button></div>
+
+    <div class="rsec" id="r-verlust">
+      <h2 class="find">Wie viel kannst du verlieren?</h2>
+      <p class="lead" id="r-h"></p>
+      <div class="kpis" id="r-k"></div>
+      <div class="panel"><div class="ph"><h3>Historische Ergebnisse</h3><span class="small" id="r-hs"></span></div><div class="fig"><svg id="r-g" role="img" aria-label="Histogramm historischer Ergebnisse"></svg></div></div>
+      <details class="prof"><summary>Für Profis</summary><div class="prof-b">
+        <p class="mut">Vier Methoden im Vergleich. Oben auf der Seite steht der historische Wert.</p>
+        <div class="scroll"><table class="tbl" id="r-meth"></table></div>
+        <p class="small">Historisch: überlappende Zeiträume der letzten zwei Jahre. Parametrisch: Normalverteilung. Monte Carlo: 20.000 Ziehungen aus der Kovarianzmatrix. Cornish-Fisher: Normalverteilung mit Korrektur für Schiefe und Wölbung.</p>
+      </div></details>
+    </div>
+
+    <div class="rsec" id="r-aktien">
+      <h2 class="find">Welche Aktien tragen dein Risiko?</h2>
+      <p class="lead" id="b-h"></p>
+      <div class="t21">
+        <div class="panel"><div class="ph"><h3>Gewicht gegen Risiko</h3><span class="small">Balken: Anteil am Risiko · blauer Strich: Gewicht</span></div><div class="rows" id="b-r"></div></div>
+        <div class="panel"><h3>Was wäre, wenn …</h3>
+          <label class="f" for="wi">Aktie<select id="wi"></select></label>
+          <label class="f" for="wx">Neues Gewicht: <output id="wxo"></output><input id="wx" type="range" min="0" max="0.5" step="0.01"></label>
+          <div class="kpis" id="b-w"></div>
+          <p class="small">Übrige Aktien anteilig angepasst.</p></div>
+      </div>
+    </div>
+
+    <div class="rsec" id="r-faktoren">
+      <h2 class="find">Was steckt dahinter?</h2>
+      <p class="lead" id="f-h"></p>
+      <div class="t21">
+        <div class="panel"><div class="ph"><h3>Worauf dein Depot setzt</h3><span class="small">Faktor-Beta</span></div>
+          <div class="fx" id="f-b"></div>
+          <p class="small">Blass: kein klarer Effekt, statistisch nicht gesichert.</p></div>
+        <div class="panel"><h3>Woher das Risiko kommt</h3><div class="rows" id="f-r"></div><p class="mut" id="f-rt"></p></div>
+      </div>
+      <details class="prof"><summary>Für Profis</summary><div class="prof-b">
+        <div class="kpis" id="f-k"></div>
+        <div class="ph"><h3>Faktoren je Aktie</h3><span class="small">Beta je Faktor</span></div>
+        <div class="scroll"><table class="hm fxt" id="f-t"></table></div>
+        <div class="scroll"><table class="tbl" id="f-tt"></table></div>
+        <p class="small">Methode: OLS-Regression der Tagesrenditen auf 6 Faktoren aus ETF-Kursen in Euro. Markt = S&amp;P 500 · Größe = IWM − S&amp;P 500 · Value = IVE − IVW · Momentum = MTUM, Qualität = QUAL, Geringe Schwankung = USMV, jeweils − S&amp;P 500.</p>
+      </div></details>
+    </div>
+    <p class="small disc">Hebel zeigen, was eine Änderung bewirken würde. Das ist keine Anlageberatung.</p>
+  </section>
+
+  <section class="page" data-page="vola" hidden>
+    <h2 class="find" id="v-h">–</h2>
+    <p class="small" id="v-note" aria-live="polite"></p>
+    <div class="wx" id="v-wx"></div>
+    <div class="panel">
+      <div class="ph"><h3>Schwankung gestern, heute und in drei Monaten</h3><div class="vctl"><div class="seg" id="v-un" role="group" aria-label="Einheit"><button data-u="p" aria-pressed="true">Schwankung %</button><button data-u="e" aria-pressed="false">Schlechter Tag €</button></div><div class="seg" id="v-rg" role="group" aria-label="Zeitraum"><button data-r="3" aria-pressed="false">3 Monate</button><button data-r="1" aria-pressed="true">1 Jahr</button><button data-r="2" aria-pressed="false">2 Jahre</button></div></div></div>
+      <div class="fig" style="min-height:380px"><svg id="v-g" tabindex="0" role="img" aria-label="Schwankung der Vergangenheit und Prognose-Fächer mit Terminen. Pfeiltasten zeigen einzelne Tage, Plus und Minus zoomen."></svg></div>
+      <div class="vnav"><svg id="v-nav" role="img" aria-label="Übersicht über den ganzen Zeitraum, das Fenster legt den Ausschnitt fest"></svg></div>
+      <p class="small vhint" id="v-hint"></p>
+      <div class="vlg small" id="v-lg"><span><i class="h"></i>Schwankung p.a.</span><span><i class="f"></i>Prognose (Median)</span><button type="button" data-ly="b2"><i class="b2"></i>50 % der Zukünfte</button><button type="button" data-ly="b1"><i class="b1"></i>80 % der Zukünfte</button><button type="button" data-ly="l"><i class="l"></i>langfristig&nbsp;<b id="v-lr"></b></button><button type="button" data-ly="e"><i class="e"></i>Termine</button><button type="button" data-ly="p"><i class="p2"></i><i class="p3"></i>unruhige Phasen</button><span class="small">Klicken blendet ein und aus</span></div>
+    </div>
+    <div class="two">
+      <div class="panel"><div class="ph"><h3>Was kommt</h3><span class="small">nächste 90 Tage</span></div><ul class="wev" id="v-ev"></ul></div>
+      <div class="panel"><div class="ph"><h3>Sturmtreiber</h3><span class="small">Anteil an der Unruhe der nächsten Woche · blauer Strich: Gewicht</span></div><div class="rows" id="v-dr"></div><p id="v-drl"></p><button type="button" class="btn gh sm" id="v-drb">Ausprobieren</button></div>
+    </div>
+    <div class="two">
+      <div class="panel" id="v-mm"><h3>Markt gegen Modell</h3><p id="v-mmt"></p><div class="kpis" id="v-mmk"></div><div class="fig spk"><svg id="v-sp" role="img" aria-label="VIX im letzten Jahr"></svg></div><p class="small">VIX: die Schwankung, die der Optionsmarkt für den S&amp;P 500 erwartet. Umgerechnet auf dein Depot mit seinem Beta.</p></div>
+      <div class="panel"><h3>Wie gut ist die Prognose?</h3><p id="v-bt"></p><div class="dots" id="v-btd" role="img" aria-label="Treffer je Woche"></div><p class="small">Je Punkt eine Woche. Grün: Die tatsächliche Schwankung lag im Band, in dem 80 % der Zukünfte lagen. Erwartet sind also etwa 80 % Treffer. Getestet nur mit Daten, die zum jeweiligen Zeitpunkt bekannt waren.</p></div>
+    </div>
+    <div class="panel"><h3>Was das für den VaR heißt</h3><div class="kpis" id="v-var"></div><p id="v-vt"></p></div>
+    <div class="panel"><h3>So rechnen wir</h3><p class="mut">Schwankungen kommen in Wellen: Auf unruhige Tage folgen oft weitere unruhige Tage, dann beruhigt es sich wieder. Schlechte Nachrichten bewegen die Kurse dabei stärker als gute. Bekannte Termine wie Quartalszahlen oder Zinsentscheide bringen oft Sprünge, wie groß sie üblich sind, messen wir an den letzten Terminen. Aus all dem spielen wir 2.000 mögliche Zukünfte für die nächsten drei Monate durch.</p></div>
+    <details class="prof"><summary>Für Profis</summary><div class="prof-b" id="v-p"></div></details>
+  </section>
+
+  <section class="page" data-page="stress" hidden>
+    <h2 class="find" id="s-h">–</h2>
+    <div class="scs" id="s-c"></div>
+    <div class="t21">
+      <div class="panel"><div class="ph"><h3 id="s-dt">Wer verliert wie viel?</h3><span class="small">Verlust je Aktie in €</span></div><div class="rows" id="s-r"></div></div>
+      <div class="panel" id="s-own"><h3>Eigenes Szenario</h3>
+        <label class="f" for="cm">Markt: <output id="cmo"></output><input id="cm" type="range" min="-0.6" max="0.3" step="0.01"></label>
+        <label class="f" for="cs">Zusätzlicher Sektor-Schock<select id="cs"></select></label>
+        <label class="f" for="cx">Sektor: <output id="cxo"></output><input id="cx" type="range" min="-0.6" max="0.6" step="0.01"></label>
+        <div class="kpis" id="s-o"></div></div>
+    </div>
+    <p class="small">Vereinfachtes Modell: Aktienrendite = Beta × Marktbewegung + Sektoraufschlag. Beta aus echten Kursen geschätzt, Marktbewegungen gerundet (S&amp;P 500, Hoch bis Tief), Sektoraufschläge geschätzt.</p>
+  </section>
+
+  <section class="page" data-page="einstellungen" hidden>
+    <div class="panel rset"><h3>Risikomessung</h3><p class="mut">Gilt für Value at Risk und Expected Shortfall auf allen Seiten.</p><div class="rq"><span class="lbl" id="sc-l">Sicherheit</span><div class="seg" id="sc-c" role="group" aria-labelledby="sc-l"><button type="button" data-v="0.95" data-x="VaR wird in etwa 1 von 20 Zeiträumen überschritten." aria-pressed="false">95 % (1 von 20)</button><button type="button" data-v="0.975" data-x="VaR wird in etwa 1 von 40 Zeiträumen überschritten." aria-pressed="false">97,5 % (1 von 40)</button><button type="button" data-v="0.99" data-x="VaR wird in etwa 1 von 100 Zeiträumen überschritten. Standard bei Banken." aria-pressed="false">99 % (1 von 100)</button><button type="button" data-v="0.995" data-x="VaR wird in etwa 1 von 200 Zeiträumen überschritten. Standard bei Versicherern (Solvency II)." aria-pressed="false">99,5 % (1 von 200)</button></div><p class="small" id="sc-cx" aria-live="polite"></p></div><div class="rq"><span class="lbl" id="sh-l">Zeitraum</span><div class="seg" id="sc-h" role="group" aria-labelledby="sh-l"><button type="button" data-v="1" data-x="Verlust von einem Handelstag zum nächsten." aria-pressed="false">1 Tag</button><button type="button" data-v="10" data-x="Verlust über zwei Handelswochen. Haltedauer nach Basel." aria-pressed="false">10 Tage (2 Börsenwochen)</button><button type="button" data-v="21" data-x="Verlust über rund 21 Handelstage." aria-pressed="false">1 Monat (21 Handelstage)</button></div><p class="small" id="sc-hx" aria-live="polite"></p></div><div class="rnow" id="sc-now" aria-live="polite"></div></div>
+    <div class="two">
+      <div class="panel"><h3>Darstellung</h3>
+        <span class="lbl" id="fm-l">Farbmodus</span><div class="seg mode" role="group" aria-labelledby="fm-l"><button data-m="light" aria-pressed="false"><i></i>Weiß</button><button data-m="dark" aria-pressed="false"><i></i>Schwarz</button></div>
+        </div>
+      <div class="panel"><h3>Depot</h3><p class="mut">Ein neues Depot ersetzt das aktuelle: per Import (Datei oder Screenshot) oder als Demo-Portfolio aus 8 bis 12 Aktien des S&amp;P 500.</p><a class="btn" href="#depot" style="justify-self:start">Depot laden</a>
+        <p class="small">Datenbasis: alle Aktien des S&amp;P 500, Tagesschlusskurse der letzten zwei Jahre von Yahoo Finance (yfinance), in Euro umgerechnet. Markt = S&amp;P 500 (^GSPC).</p></div>
+    </div>
+  </section>
+</main>
+
+<dialog class="dlg" id="imp-dlg" aria-labelledby="imp-h">
+  <div class="ph"><h3 id="imp-h">Positionen prüfen</h3><button type="button" class="x" id="imp-x" aria-label="Schließen">×</button></div>
+  <p class="small" id="imp-sum" aria-live="polite"></p>
+  <ul class="imp-warn small" id="imp-warn"></ul>
+  <div class="scroll"><table class="tbl impt"><thead><tr><th class="l">Wertpapier</th><th class="l">Yahoo-Symbol</th><th>Stück</th><th class="hide-s">Kurs</th><th>Wert</th><th class="l">Status</th><th><span class="sr">Entfernen</span></th></tr></thead><tbody id="imp-t"></tbody></table></div>
+  <button type="button" class="btn gh sm" id="imp-add">Zeile hinzufügen</button>
+  <div class="dlg-foot"><span id="imp-tot"></span><button type="button" class="btn gh" id="imp-cancel">Abbrechen</button><button type="button" class="btn" id="imp-ok" disabled>Übernehmen</button></div>
+</dialog>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
