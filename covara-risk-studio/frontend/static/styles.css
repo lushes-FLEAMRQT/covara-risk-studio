@@ -473,3 +473,17 @@ input:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:1000px){.ld-feat{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:900px){.ld-hero .wrap{grid-template-columns:minmax(0,1fr);gap:32px}.ld-head{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.ld nav.top{padding-block:12px}.ld-intro h1{font-size:clamp(44px,12vw,64px)}.ld-lede{font-size:17px}.ld-feat{grid-template-columns:minmax(0,1fr);gap:24px}.ld-rep dl>div:nth-child(n+3){display:none}.ld-act .btn{width:100%}.ld-cta h2{font-size:40px}}
+
+/* Spalten-Zuordnung beim Import */
+.imp-act{display:flex;flex-wrap:wrap;gap:8px}
+.map-f{display:grid;gap:10px;padding:14px 0;border-top:1px solid var(--ln)}
+.map-f:first-child{border-top:0;padding-top:0}
+.map-f h4{margin:0;font-size:15px}
+.map-sel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.map-sel label{display:grid;gap:4px;font-size:13px;font-weight:600;color:var(--mut)}
+.map-sel select{min-height:40px;font-size:14px}
+.mapt{font-size:13px}
+.mapt th,.mapt td{white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.mapt th .tag{display:block;font-size:11px;font-weight:700;color:var(--g);text-transform:uppercase;letter-spacing:.04em}
+.mapt .on{background:color-mix(in srgb,var(--g) 9%,transparent)}
+@media(max-width:600px){.map-sel{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -10,7 +10,7 @@ Im Projektordner (nach dem Entpacken heißt er `covara-risk-studio`):
 cd covara-risk-studio
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-cp .env.example .env    # optional: eigenen ANTHROPIC_API_KEY eintragen (nur für den Depot-Import nötig)
+cp .env.example .env    # optional, derzeit ist kein Schlüssel nötig
 .venv/bin/uvicorn backend.main:app --reload --port 8010
 ```
 
@@ -37,7 +37,7 @@ Bereiche im Studio (Hash in der Adresse):
 
 | Hash | Bereich | Inhalt |
 | --- | --- | --- |
-| `#depot` | Depot laden | Import per Datei (Claude liest CSV, Excel, PDF, Bilder) oder Demo-Portfolio |
+| `#depot` | Depot laden | Import aus CSV oder Excel (Spalten automatisch erkannt, sonst per Auswahl zugeordnet) oder Demo-Portfolio |
 | `#portfolio` | Portfolio | Urteil gegen einen S&P-500-ETF, die 3 wichtigsten Punkte mit Wirkung in Euro, Übersetzung der Zahlen, Wertverlauf, Risikoklasse, Positionen, Sektoren, Kennzahlen, Drawdown |
 | `#risiko` | Risiko | drei Abschnitte: Verlust (VaR, ES, Histogramm), Aktien (Risikobeiträge, Was-wäre-wenn), Faktoren (Stil-Profil, Euro-Wirkung je Faktor) |
 | `#vola` | Risiko-Wetter | Wetter für heute, 1 Woche, 1 Monat, 3 Monate; Schwankung mit Prognose-Fächer und Terminen; was kommt; Sturmtreiber; Markt gegen Modell (VIX); Trefferquote; VaR mit Prognose |
@@ -94,6 +94,12 @@ unter „Für Profis“. Alte Links funktionieren weiter: `#uebersicht` und `#ke
   - Datenquellen: Quartalszahlen von Yahoo Finance; Fed-Termine von federalreserve.gov (FOMC-Kalender, zweiter
     Sitzungstag); CPI-Termine von bls.gov (Release-Kalender); VIX (^VIX) von Yahoo Finance.
 - **Stresstests**: Beta × Marktbewegung + geschätzter Sektoraufschlag; der ETF verliert genau die Marktbewegung.
+- **Depot-Import** (`backend/importer.py`, `POST /api/import`): liest CSV (Trennzeichen `;` `,` Tab) und Excel (.xlsx),
+  sucht die Kopfzeile in den ersten 15 Zeilen und erkennt Name, ISIN, Ticker und Stückzahl an typischen Überschriften
+  (z. B. „Wertpapierbezeichnung“, „Stück/Nominale“, „Anzahl“, „Quantity“), ISINs auch am Inhalt. Deutsche und englische
+  Zahlen (`1.234,5` / `1,234.5`) werden verstanden, Summen- und Bargeldzeilen übersprungen. Ist die Erkennung unsicher,
+  ordnet man die Spalten im Browser per Auswahl zu (`mapping` im Formular). Zeilen ohne ISIN/Ticker und nicht gefundene
+  Ticker sucht Covara über den Namen bei Yahoo Finance (Hinweis „bitte prüfen“). Danach Prüfliste wie gehabt.
 - Der Trailer auf der Startseite nutzt ein festes Beispielportfolio mit simulierten Kursen.
 
 Hebel zeigen, was eine Änderung bewirken würde. Das ist keine Anlageberatung.
@@ -104,11 +110,11 @@ Hebel zeigen, was eine Änderung bewirken würde. Das ist keine Anlageberatung.
 
 ## Schlüssel und Einstellungen (.env)
 
-API-Schlüssel, z. B. für Anthropic, gehören in die Datei `.env` im Projektordner. Sie ist in `.gitignore`
+API-Schlüssel (ab Schritt 2: `GEMINI_API_KEY` für PDF/Screenshots) gehören in die Datei `.env` im Projektordner. Sie ist in `.gitignore`
 eingetragen und wird **nie** zu GitHub gepusht. Als Vorlage dient `.env.example`:
 
 ```bash
-cp .env.example .env   # dann ANTHROPIC_API_KEY=... eintragen und Server neu starten
+cp .env.example .env   # Schlüssel eintragen und Server neu starten
 ```
 
 Der Server liest die Datei beim Start (`python-dotenv`); die Werte bleiben auf dem Server und gehen nie an den Browser.

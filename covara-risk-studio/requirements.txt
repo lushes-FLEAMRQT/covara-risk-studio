@@ -4,6 +4,5 @@ yfinance>=0.2.50
 numpy>=2.0
 pandas>=2.2
 python-dotenv
-anthropic
 openpyxl
 python-multipart

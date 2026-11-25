@@ -1,63 +1,50 @@
-"""Depot-Import: Claude liest Positionen aus CSV, Excel, PDF oder Bildern (Screenshots, Fotos)."""
+"""Depot-Import ohne KI: CSV- und Excel-Tabellen lesen, Spalten erkennen, Positionen bilden.
+
+Ablauf:
+1. read_table(): Datei → Kopfzeile + Datenzeilen (alles als Text, Excel-Zahlen bleiben Zahlen).
+2. guess(): Spalten für Name, ISIN, Ticker und Stückzahl anhand der Überschriften (und ISIN am Inhalt) erkennen.
+3. positions(): mit einer Zuordnung die Positionen bilden; Summen-, Bargeld- und Leerzeilen fallen weg.
+"""
 from __future__ import annotations
 
-import base64
 import csv
 import io
-import json
 import os
+import re
 
-import anthropic
-
-# Modell für den Import; in .env mit COVARA_IMPORT_MODEL überschreibbar
-MODEL = os.environ.get("COVARA_IMPORT_MODEL", "claude-sonnet-5-5")
-# Server-seitiger Rückfall bei Ablehnung gibt es nur für Opus/Sonnet 5.5, nicht für Haiku
-FALLBACK_MODELS = {"claude-opus-5-5", "claude-sonnet-5-5"}
 MAX_BYTES = 10 * 1024 * 1024
 MAX_FILES = 5
-IMAGE_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
-EXT_IMAGE = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp"}
+MAX_ROWS = 500
+FIELDS = ("name", "isin", "ticker", "qty")
+TABLE_EXT = {".csv", ".txt", ".tsv", ".xlsx", ".xlsm"}
+LATER_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"}  # kommt mit Schritt 2 (Gemini)
 
-SYSTEM = """Du liest Depotauszüge, Broker-Exporte und Screenshots von Wertpapierdepots und gibst die enthaltenen Positionen zurück.
+ISIN_RE = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$")
 
-Für jede Position:
-- name: Name des Wertpapiers, wie er in der Datei steht.
-- isin: ISIN, falls in der Datei vorhanden, sonst null. Nie erfinden.
-- symbol: das passende Symbol bei Yahoo Finance. US-Aktien ohne Endung (AAPL, BRK-B), sonst mit Börsen-Endung: Xetra .DE, London .L, Amsterdam .AS, Paris .PA, Mailand .MI, Schweiz .SW, Wien .VI, Madrid .MC, Toronto .TO, Tokio .T. Für ETFs die Notierung in Euro bevorzugen (meist .DE oder .AS). Steht ein Ticker in der Datei, diesen übernehmen und nur bei Bedarf die Endung ergänzen. Wenn unklar, die wahrscheinlichste Notierung wählen.
-- quantity: Anzahl der Stücke (Anteile), nicht der Wert in Euro. Bruchstücke sind erlaubt. Steht nur ein Wert und keine Stückzahl da, null.
-- note: nur bei echter Unsicherheit ein kurzer Hinweis (z. B. "Notierung unklar: ausschüttend oder thesaurierend", "Stückzahl aus Wert und Kurs berechnet"), sonst null. Bei eindeutigen Namen wie Apple → AAPL oder SAP → SAP.DE kein Hinweis, auch wenn keine ISIN dasteht.
-
-Nicht aufnehmen: Bargeld, Verrechnungskonto, Summenzeilen, Kryptowährungen, Anleihen ohne Börsensymbol, Sparpläne ohne Bestand.
-Kommt dasselbe Wertpapier mehrfach vor (z. B. in mehreren Dateien), die Stückzahlen zusammenzählen.
-Unter warnings knappe Hinweise auf Probleme mit der Datei (unleserlich, abgeschnitten, keine Positionen gefunden). Leer, wenn alles in Ordnung ist."""
-
-SCHEMA = {
-    "type": "object",
-    "properties": {
-        "positions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "isin": {"type": ["string", "null"]},
-                    "symbol": {"type": ["string", "null"]},
-                    "quantity": {"type": ["number", "null"]},
-                    "note": {"type": ["string", "null"]},
-                },
-                "required": ["name", "isin", "symbol", "quantity", "note"],
-                "additionalProperties": False,
-            },
-        },
-        "warnings": {"type": "array", "items": {"type": "string"}},
-    },
-    "required": ["positions", "warnings"],
-    "additionalProperties": False,
+# Überschriften (klein, ohne Sonderzeichen) je Feld; zuerst exakte Treffer, dann "enthält"
+ALIASES = {
+    "name": ["name", "bezeichnung", "wertpapier", "wertpapiername", "wertpapierbezeichnung", "titel", "instrument",
+             "security", "securityname", "produkt", "gattung", "beschreibung", "description", "unternehmen", "aktie",
+             "position", "fonds", "fondsname", "emittent", "papier"],
+    "isin": ["isin", "isincode", "isinnummer"],
+    "ticker": ["ticker", "symbol", "tickersymbol", "kuerzel", "kürzel", "yahoo", "yahoosymbol", "boersenkuerzel",
+               "börsenkürzel", "yahooticker", "code"],
+    "qty": ["stück", "stueck", "stk", "st", "anzahl", "menge", "bestand", "stückzahl", "stueckzahl", "nominale",
+            "nominal", "quantity", "qty", "shares", "anteile", "units", "stückbestand", "stücknominale"],
 }
+# Wörter, die eine Spalte als Kurs/Wert ausweisen: nie als Stückzahl nehmen
+NOT_QTY = ("kurs", "preis", "wert", "price", "value", "eur", "betrag", "summe", "datum", "date", "gewinn", "einstand")
+# Zeilen, die keine Wertpapiere sind
+SKIP_ROW = re.compile(r"^(summe|gesamt|total|zwischensumme|saldo|cash|bargeld|guthaben|verrechnungskonto|"
+                      r"kontostand|liquidität|liquiditaet|depotwert|gesamtwert)\b", re.I)
 
 
 class ReadError(Exception):
     """Fehler, die dem Nutzer direkt angezeigt werden können."""
+
+
+def _key(s) -> str:
+    return re.sub(r"[^a-z0-9äöüß]", "", str(s or "").lower())
 
 
 def _text(raw: bytes) -> str:
@@ -69,101 +56,180 @@ def _text(raw: bytes) -> str:
     return raw.decode("utf-8", "replace")
 
 
-def _excel(raw: bytes) -> str:
+def _cell(v) -> str | float:
+    if v is None:
+        return ""
+    if isinstance(v, bool):
+        return str(v)
+    if isinstance(v, (int, float)):
+        return float(v)
+    return str(v).replace(" ", " ").strip()
+
+
+def _csv_rows(raw: bytes) -> list[list]:
+    text = _text(raw)
+    sample = "\n".join(text.splitlines()[:30])
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=";,\t|")
+        delim = dialect.delimiter
+    except csv.Error:
+        counts = {d: sample.count(d) for d in ";\t,|"}
+        delim = max(counts, key=counts.get)
+    return [[_cell(c) for c in row] for row in csv.reader(io.StringIO(text), delimiter=delim)]
+
+
+def _excel_rows(raw: bytes) -> list[list]:
     import openpyxl
 
     try:
         wb = openpyxl.load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
     except Exception:
         raise ReadError("Die Excel-Datei lässt sich nicht öffnen (nur .xlsx wird unterstützt).")
-    parts = []
-    for ws in wb.worksheets:
-        buf = io.StringIO()
-        w = csv.writer(buf, delimiter=";")
-        for row in ws.iter_rows(values_only=True):
-            if any(v is not None and str(v).strip() for v in row):
-                w.writerow(["" if v is None else v for v in row])
-        if buf.getvalue().strip():
-            parts.append(f"Tabellenblatt „{ws.title}“:\n{buf.getvalue()}")
-    if not parts:
-        raise ReadError("Die Excel-Datei ist leer.")
-    return "\n\n".join(parts)
+    best: list[list] = []
+    for ws in wb.worksheets:  # Tabellenblatt mit den meisten gefüllten Zeilen
+        rows = [[_cell(v) for v in r] for r in ws.iter_rows(values_only=True)]
+        rows = [r for r in rows if any(c != "" for c in r)]
+        if len(rows) > len(best):
+            best = rows
+    return best
 
 
-def _block(name: str, ctype: str, raw: bytes) -> list[dict]:
+def _header_score(row: list) -> int:
+    keys = [_key(c) for c in row if isinstance(c, str)]
+    return sum(any(k == a for f in FIELDS for a in ALIASES[f]) for k in keys if k)
+
+
+def read_table(name: str, raw: bytes) -> dict:
+    """Datei → {"columns": [...], "rows": [[...]], "header": bool}."""
     ext = os.path.splitext(name.lower())[1]
-    b64 = lambda: base64.standard_b64encode(raw).decode("ascii")
-    if ctype in IMAGE_TYPES or ext in EXT_IMAGE:
-        media = ctype if ctype in IMAGE_TYPES else EXT_IMAGE[ext]
-        return [{"type": "text", "text": f"Datei: {name}"},
-                {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64()}}]
-    if ctype == "application/pdf" or ext == ".pdf":
-        return [{"type": "text", "text": f"Datei: {name}"},
-                {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64()}}]
     if ext in (".xlsx", ".xlsm"):
-        return [{"type": "text", "text": f"Datei: {name} (Excel, als CSV)\n\n{_excel(raw)}"}]
-    if ext in (".csv", ".txt", ".tsv") or ctype.startswith("text/"):
-        return [{"type": "text", "text": f"Datei: {name}\n\n{_text(raw)}"}]
-    if ext in (".heic", ".heif"):
-        raise ReadError(f"{name}: HEIC-Fotos werden nicht unterstützt. Bitte als JPG oder PNG speichern.")
-    if ext == ".xls":
+        rows = _excel_rows(raw)
+    elif ext in (".csv", ".txt", ".tsv"):
+        rows = _csv_rows(raw)
+    elif ext == ".xls":
         raise ReadError(f"{name}: altes Excel-Format. Bitte als .xlsx oder .csv speichern.")
-    raise ReadError(f"{name}: Dateityp wird nicht unterstützt (CSV, Excel, PDF, PNG oder JPG).")
+    else:
+        raise ReadError(f"{name}: Dateityp wird nicht unterstützt (CSV oder Excel).")
+    rows = [r for r in rows if any(c != "" for c in r)]
+    if not rows:
+        raise ReadError(f"{name} enthält keine Tabelle.")
+    # Kopfzeile: die Zeile mit den meisten bekannten Überschriften unter den ersten 15 (manche Exporte haben Vorspann)
+    scores = [_header_score(r) for r in rows[:15]]
+    hi = max(range(len(scores)), key=lambda i: scores[i])
+    width = max(len(r) for r in rows)
+    if scores[hi] > 0:
+        head = [str(c).strip() if c != "" else f"Spalte {i + 1}" for i, c in enumerate(rows[hi])]
+        data = rows[hi + 1:]
+        header = True
+    else:
+        head, data, header = [], rows, False
+    head += [f"Spalte {i + 1}" for i in range(len(head), width)]
+    data = [r + [""] * (width - len(r)) for r in data][:MAX_ROWS]
+    return {"columns": head, "rows": data, "header": header}
 
 
-def extract(files: list[tuple[str, str, bytes]], model: str | None = None) -> dict:
-    """Schickt die Dateien an Claude und gibt {"positions": [...], "warnings": [...]} zurück."""
+def guess(t: dict) -> tuple[dict, bool]:
+    """Spalten erkennen. Gibt (Zuordnung {feld: index|None}, sicher?) zurück."""
+    keys = [_key(c) for c in t["columns"]] if t["header"] else [""] * len(t["columns"])
+    m: dict[str, int | None] = {f: None for f in FIELDS}
+    used: set[int] = set()
+
+    def pick(f, test):
+        for i, k in enumerate(keys):
+            if i not in used and k and test(k):
+                m[f] = i
+                used.add(i)
+                return True
+        return False
+
+    for f in ("isin", "ticker", "qty", "name"):  # exakte Überschrift
+        pick(f, lambda k, f=f: k in ALIASES[f])
+    for f in ("isin", "ticker", "name"):  # Überschrift enthält das Wort
+        if m[f] is None:
+            pick(f, lambda k, f=f: any(a in k for a in ALIASES[f] if len(a) >= 4))
+    if m["qty"] is None:
+        pick("qty", lambda k: any(a in k for a in ALIASES["qty"] if len(a) >= 4) and not any(w in k for w in NOT_QTY))
+
+    # ISIN am Inhalt erkennen (Spalte, in der die meisten Werte wie ISINs aussehen)
+    rows = t["rows"][:50]
+    if m["isin"] is None and rows:
+        for i in range(len(t["columns"])):
+            vals = [str(r[i]).strip().upper() for r in rows if r[i] != ""]
+            if i not in used and vals and sum(bool(ISIN_RE.match(v)) for v in vals) / len(vals) >= 0.6:
+                m["isin"] = i
+                used.add(i)
+                break
+
+    sure = m["qty"] is not None and any(m[f] is not None for f in ("name", "isin", "ticker"))
+    return m, sure
+
+
+def qty_value(v, comma_decimal: bool) -> float | None:
+    """'35,5' → 35.5 · '1.234,5' → 1234.5 · '1,234.5' → 1234.5 · '12 Stk.' → 12."""
+    if isinstance(v, float):
+        return v if v > 0 else None
+    s = re.sub(r"[^\d.,\-]", "", str(v))
+    if not s or not re.search(r"\d", s):
+        return None
+    if "," in s and "." in s:
+        s = s.replace(".", "").replace(",", ".") if s.rfind(",") > s.rfind(".") else s.replace(",", "")
+    elif "," in s:
+        s = s.replace(",", ".") if comma_decimal or s.count(",") == 1 and not re.search(r",\d{3}$", s) else s.replace(",", "")
+    elif s.count(".") > 1 or (comma_decimal and re.search(r"\.\d{3}$", s)):
+        s = s.replace(".", "")
+    try:
+        x = float(s)
+    except ValueError:
+        return None
+    return x if x > 0 else None
+
+
+def positions(t: dict, m: dict) -> tuple[list[dict], list[str]]:
+    """Zuordnung anwenden. Gibt (Positionen, übersprungene Zeilen) zurück."""
+    get = lambda r, f: (r[m[f]] if m.get(f) is not None and m[f] < len(r) else "")
+    # Dezimaltrennzeichen der Stückzahl-Spalte: Komma, wenn irgendwo "12,5"-artige Werte stehen
+    q = [str(get(r, "qty")) for r in t["rows"] if isinstance(get(r, "qty"), str)]
+    comma = any(re.search(r",\d{1,2}$|,\d{4,}$|\.\d{3},|^0,", v.strip()) for v in q)
+    out, skipped = [], []
+    for r in t["rows"]:
+        name = str(get(r, "name")).strip()
+        isin = str(get(r, "isin")).strip().upper().replace(" ", "")
+        tick = str(get(r, "ticker")).strip().upper()
+        isin = isin if ISIN_RE.match(isin) else ""
+        if not isin and ISIN_RE.match(tick):  # ISIN steht in der Ticker-Spalte
+            isin, tick = tick, ""
+        label = name or tick or isin
+        if not label or SKIP_ROW.match(label):
+            continue
+        qty = qty_value(get(r, "qty"), comma) if m.get("qty") is not None else None
+        if not (name or isin or tick):
+            continue
+        if qty is None and not (isin or tick) and not any(isinstance(c, float) for c in r):
+            skipped.append(label)  # nur Text, keine Zahlen: Überschrift, Kategorie o. Ä.
+            continue
+        out.append({"name": label, "isin": isin or None, "symbol": tick or None, "quantity": qty})
+    return out, skipped
+
+
+def load(files: list[tuple[str, bytes]]) -> tuple[list[dict], list[str]]:
+    """Dateien prüfen und lesen. Gibt (Tabellen je Datei, Hinweise) zurück; PDF/Bilder → Hinweis."""
     if not files:
         raise ReadError("Keine Datei ausgewählt.")
     if len(files) > MAX_FILES:
         raise ReadError(f"Höchstens {MAX_FILES} Dateien auf einmal.")
-    content: list[dict] = []
-    for name, ctype, raw in files:
+    tables, notes = [], []
+    for name, raw in files:
+        ext = os.path.splitext(name.lower())[1]
         if not raw:
             raise ReadError(f"{name} ist leer.")
         if len(raw) > MAX_BYTES:
             raise ReadError(f"{name} ist größer als 10 MB.")
-        content += _block(name, ctype or "", raw)
-    content.append({"type": "text", "text": "Lies alle Wertpapierpositionen aus diesen Dateien aus."})
-
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise ReadError("Kein ANTHROPIC_API_KEY in der .env-Datei. Schlüssel eintragen und Server neu starten.")
-    client = anthropic.Anthropic()
-    model = model or MODEL
-    extra = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"} if model in FALLBACK_MODELS else {}
-    try:
-        res = client.beta.messages.create(
-            model=model,
-            max_tokens=16000,
-            **extra,
-            system=SYSTEM,
-            output_config={"effort": "medium", "format": {"type": "json_schema", "schema": SCHEMA}},
-            messages=[{"role": "user", "content": content}],
-        )
-    except anthropic.AuthenticationError:
-        raise ReadError("Der Anthropic-API-Schlüssel ist ungültig.")
-    except anthropic.PermissionDeniedError:
-        raise ReadError("Der Anthropic-API-Schlüssel hat keine Berechtigung für dieses Modell.")
-    except anthropic.RateLimitError:
-        raise ReadError("Zu viele Anfragen an Claude. Bitte kurz warten und erneut versuchen.")
-    except anthropic.BadRequestError as e:
-        msg = str(getattr(e, "message", e))
-        if "credit" in msg.lower() or "billing" in msg.lower():
-            raise ReadError("Das Anthropic-Konto hat kein Guthaben mehr.")
-        raise ReadError("Claude konnte die Datei nicht verarbeiten (zu groß oder beschädigt).")
-    except anthropic.APIStatusError:
-        raise ReadError("Claude ist gerade nicht erreichbar. Bitte gleich noch einmal versuchen.")
-    except anthropic.APIConnectionError:
-        raise ReadError("Keine Verbindung zu Claude. Internetverbindung prüfen.")
-
-    if res.stop_reason == "refusal":
-        raise ReadError("Claude hat die Datei abgelehnt.")
-    if res.stop_reason == "max_tokens":
-        raise ReadError("Die Datei enthält zu viele Positionen für einen Durchgang. Bitte aufteilen.")
-    text = next((b.text for b in res.content if b.type == "text"), "")
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        raise ReadError("Claudes Antwort war unvollständig. Bitte erneut versuchen.")
-    data["_usage"] = {"model": res.model, "in": res.usage.input_tokens, "out": res.usage.output_tokens}
-    return data
+        if ext in LATER_EXT:
+            notes.append(f"{name}: PDF und Bilder kommen bald. Bitte vorerst CSV oder Excel nutzen.")
+            continue
+        if ext in (".heic", ".heif"):
+            raise ReadError(f"{name}: HEIC-Fotos werden nicht unterstützt.")
+        tables.append({"file": name, **read_table(name, raw)})
+    if not tables:
+        raise ReadError(" ".join(notes) or "Keine Tabelle gefunden.")
+    return tables, notes

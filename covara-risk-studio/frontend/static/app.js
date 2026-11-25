@@ -606,9 +606,10 @@ $$('#v-lg button').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.
  L.addEventListener('focusin',e=>{const li=at(e);if(li)vHL(+li.dataset.ei,true)});L.addEventListener('focusout',()=>vHL(-1,true));
  L.addEventListener('click',e=>{const li=at(e);if(!li||!D||!D.w2)return;const ev=D.w2.em.list[+li.dataset.ei],j=D.g.sig.length-1+ev.i,s=$('#v-g');if(!s._v)return;if(j<s._v.a||j>s._v.b)vSet({a:j-(s._v.b-s._v.a)/2,b:j+(s._v.b-s._v.a)/2});requestAnimationFrame(()=>requestAnimationFrame(()=>{vShow(s,j,+li.dataset.ei);s.scrollIntoView({block:'nearest',behavior:'smooth'})}))})}
 {const mq=matchMedia('(hover:none)'),hint=()=>$('#v-hint').textContent=mq.matches?'Tippen oder wischen zeigt Werte. Unten das Fenster ziehen, um hineinzuzoomen.':'Fahr über das Diagramm für Werte. Bereich aufziehen zum Vergrößern, Doppelklick setzt zurück. Auch mit Tastatur: Pfeile, + und −.';hint();mq.addEventListener('change',hint)}
-/* ---------- Depot-Import: Dateien → Claude → Prüfen → Übernehmen ---------- */
-const IMP={files:[],rows:[],seq:0};
+/* ---------- Depot-Import: Dateien → Spalten erkennen (ggf. zuordnen) → Prüfen → Übernehmen ---------- */
+const IMP={files:[],rows:[],seq:0,map:{},tables:[]};
 const ACCEPT=['csv','txt','tsv','xlsx','xlsm','pdf','png','jpg','jpeg','webp','gif'];
+const FLD=[['name','Name'],['isin','ISIN'],['ticker','Ticker / Symbol'],['qty','Stückzahl']];
 const e2=v=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
 const kb=n=>n<1048576?`${Math.max(1,Math.round(n/1024))} KB`:`${(n/1048576).toFixed(1).replace('.',',')} MB`;
 const qf=v=>v==null||v===''?'':String(+(+v).toFixed(6)).replace('.',',');
@@ -619,22 +620,39 @@ function addFiles(list){$('#imp-err').textContent='';
   if(f.size>10485760){$('#imp-err').textContent=`${f.name} ist größer als 10 MB.`;continue}
   if(IMP.files.length>=5){$('#imp-err').textContent='Höchstens 5 Dateien auf einmal.';break}
   if(!IMP.files.some(x=>x.name===f.name&&x.size===f.size))IMP.files.push(f)}
- renderFiles()}
+ IMP.map={};renderFiles()}
 function renderFiles(){$('#imp-list').innerHTML=IMP.files.map((f,i)=>`<li><span>${esc(f.name)}</span><span class="small">${kb(f.size)}</span><button type="button" class="x" data-i="${i}" aria-label="${esc(f.name)} entfernen">×</button></li>`).join('');
  $('#imp-go').disabled=!IMP.files.length||IMP.busy}
 async function runImport(){if(!IMP.files.length||IMP.busy)return;IMP.busy=true;$('#imp-err').textContent='';
- const b=$('#imp-go');b.disabled=true;b.classList.add('wait');b.textContent='Claude liest die Dateien …';
- try{const fd=new FormData();IMP.files.forEach(f=>fd.append('files',f));
+ const b=$('#imp-go');b.disabled=true;b.classList.add('wait');b.textContent='Wird ausgelesen …';
+ const mo=$('#map-ok');mo.disabled=true;mo.textContent='Wird geprüft …';
+ try{const fd=new FormData();IMP.files.forEach(f=>fd.append('files',f));if(Object.keys(IMP.map).length)fd.append('mapping',JSON.stringify(IMP.map));
   const r=await fetch('/api/import',{method:'POST',body:fd});
   if(r.status===401){location.href='/login';return}
   let d=null;try{d=await r.json()}catch(e){}
   if(!r.ok)throw new Error(d&&typeof d.detail==='string'?d.detail:'Der Server antwortet nicht wie erwartet.');
+  IMP.tables=d.tables||[];IMP.warn=d.warnings||[];
+  if(d.need_map){openMap();return}
+  if($('#map-dlg').open)$('#map-dlg').close();
   IMP.rows=d.rows.map(x=>({id:++IMP.seq,src:x.name_file,isin:x.isin,note:x.note,sym:x.symbol||'',qty:x.quantity,ok:x.ok,reason:x.reason,name:x.name,last:x.last,cur:x.currency,sector:x.sector}));
-  IMP.warn=[...(d.warnings||[]),...(d.skipped||[]).map(n=>`${n}: kein Symbol gefunden, nicht übernommen`)];
+  IMP.warn=[...IMP.warn,...(d.skipped||[]).map(n=>`„${n}“: keine Stückzahl, übersprungen`)];
   if(!IMP.rows.length&&!IMP.warn.length)IMP.warn=['Keine Wertpapierpositionen gefunden.'];
   openCheck()}
- catch(e){$('#imp-err').textContent=e.message}
- finally{IMP.busy=false;b.classList.remove('wait');b.textContent='Mit Claude auslesen';renderFiles()}}
+ catch(e){if($('#map-dlg').open)$('#map-err').textContent=e.message;else $('#imp-err').textContent=e.message}
+ finally{IMP.busy=false;b.classList.remove('wait');b.textContent='Depot auslesen';mo.disabled=false;mo.textContent='Weiter zur Prüfung';renderFiles()}}
+/* Spalten zuordnen: je Datei vier Auswahlfelder plus Vorschau der ersten Zeilen */
+function openMap(){$('#map-err').textContent='';renderMap();const c=$('#imp-dlg');if(c.open)c.close();const d=$('#map-dlg');if(!d.open)d.showModal()}
+function renderMap(){$('#map-b').innerHTML=IMP.tables.map((t,ti)=>{const m=IMP.map[t.file]||t.mapping,lab={};FLD.forEach(([f,l])=>{if(m[f]!=null)lab[m[f]]=l});
+  const sel=FLD.map(([f,l])=>`<label>${l}<select data-t="${ti}" data-f="${f}"><option value="">– keine –</option>${t.columns.map((c,i)=>`<option value="${i}"${m[f]===i?' selected':''}>${esc(c)}</option>`).join('')}</select></label>`).join('');
+  const head=t.columns.map((c,i)=>`<th class="${lab[i]?'on':''}">${lab[i]?`<span class="tag">${lab[i]}</span>`:''}${esc(c)}</th>`).join(''),
+   body=t.preview.map(r=>`<tr>${r.map((c,i)=>`<td class="${lab[i]?'on':''}">${esc(c)}</td>`).join('')}</tr>`).join('');
+  return`<div class="map-f"><h4>${esc(t.file)} <span class="small mut">· ${t.n} Zeilen</span></h4><div class="map-sel">${sel}</div><div class="scroll"><table class="tbl mapt"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`}).join('')}
+function curMap(t){return IMP.map[t.file]||{...t.mapping}}
+function confirmMap(){for(const t of IMP.tables){const m=curMap(t);
+  if(m.qty==null){$('#map-err').textContent=`${t.file}: Bitte die Spalte mit der Stückzahl wählen.`;return}
+  if(m.name==null&&m.isin==null&&m.ticker==null){$('#map-err').textContent=`${t.file}: Bitte Name, ISIN oder Ticker wählen.`;return}
+  IMP.map[t.file]=m}
+ $('#map-err').textContent='';runImport()}
 function openCheck(){renderCheck();const d=$('#imp-dlg');if(!d.open)d.showModal()}
 function rowHtml(r){const v=r.ok&&r.qty?r.qty*r.last:null;
  const st=r.checking?'<span class="mut">wird geprüft …</span>':r.ok?`<span class="okk">✓</span> ${esc(r.cur||'')}${r.sector?' · '+esc(r.sector):''}`:`<span class="bad">✗</span> ${esc(r.reason||'nicht geprüft')}`;
@@ -643,7 +661,7 @@ function rowHtml(r){const v=r.ok&&r.qty?r.qty*r.last:null;
  <td data-l="Stück"><input class="qty" inputmode="decimal" value="${qf(r.qty)}" aria-label="Stückzahl"></td>
  <td class="hide-s">${r.ok?e2(r.last):'–'}</td><td class="val" data-l="Wert">${v!=null?eur(v):'–'}</td><td class="l st">${st}</td>
  <td class="rm"><button type="button" class="x" aria-label="Zeile entfernen">×</button></td></tr>`}
-function renderCheck(){$('#imp-t').innerHTML=IMP.rows.map(rowHtml).join('')||'<tr><td colspan="7" class="mut l">Keine Positionen. Mit „Zeile hinzufügen“ manuell ergänzen.</td></tr>';
+function renderCheck(){$('#imp-remap').hidden=!IMP.tables.length;$('#imp-t').innerHTML=IMP.rows.map(rowHtml).join('')||'<tr><td colspan="7" class="mut l">Keine Positionen. Mit „Zeile hinzufügen“ manuell ergänzen.</td></tr>';
  $('#imp-warn').innerHTML=(IMP.warn||[]).map(w=>`<li>${esc(w)}</li>`).join('');sumCheck()}
 function sumCheck(){const ok=IMP.rows.filter(r=>r.ok&&r.qty>0),tot=ok.reduce((a,r)=>a+r.qty*r.last,0),bad=IMP.rows.length-ok.length;
  $('#imp-sum').textContent=`${IMP.rows.length} Positionen erkannt · ${ok.length} gültig${bad?` · ${bad} mit Problem`:''}`;
@@ -670,7 +688,7 @@ function bindImport(){const fi=$('#imp-f'),dz=$('#imp-drop');
  ['dragenter','dragover'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add('on')}));
  ['dragleave','drop'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.remove('on')}));
  dz.addEventListener('drop',e=>addFiles(e.dataTransfer.files));
- $('#imp-list').addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(!b)return;IMP.files.splice(+b.dataset.i,1);renderFiles()});
+ $('#imp-list').addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(!b)return;IMP.files.splice(+b.dataset.i,1);IMP.map={};renderFiles()});
  $('#imp-go').addEventListener('click',runImport);
  const row=e=>IMP.rows.find(r=>r.id===+e.target.closest('tr')?.dataset.id);
  $('#imp-t').addEventListener('change',e=>{const r=row(e);if(!r)return;
@@ -681,6 +699,13 @@ function bindImport(){const fi=$('#imp-f'),dz=$('#imp-drop');
   const ins=$$('#imp-t .sym');ins[ins.length-1]?.focus()});
  $('#imp-ok').addEventListener('click',acceptImport);
  $('#imp-x').addEventListener('click',()=>$('#imp-dlg').close());
+ $('#imp-remap').addEventListener('click',openMap);
+ $('#map-b').addEventListener('change',e=>{const s=e.target.closest('select');if(!s)return;const t=IMP.tables[+s.dataset.t],m=curMap(t),v=s.value===''?null:+s.value;
+  for(const [f] of FLD)if(f!==s.dataset.f&&m[f]===v&&v!=null)m[f]=null; /* eine Spalte nur einmal */
+  m[s.dataset.f]=v;IMP.map[t.file]=m;$('#map-err').textContent='';renderMap()});
+ $('#map-ok').addEventListener('click',confirmMap);
+ $('#map-x').addEventListener('click',()=>$('#map-dlg').close());
+ $('#map-cancel').addEventListener('click',()=>$('#map-dlg').close());
  $('#imp-cancel').addEventListener('click',()=>$('#imp-dlg').close());
  renderFiles()}
 

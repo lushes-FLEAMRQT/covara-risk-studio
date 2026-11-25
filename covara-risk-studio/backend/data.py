@@ -272,6 +272,12 @@ def _search(q: str) -> str | None:
     return None
 
 
+def search_names(names: list[str]) -> list[str | None]:
+    """Yahoo-Suche nach Wertpapiernamen (für Zeilen ohne ISIN und Ticker), parallel."""
+    with ThreadPoolExecutor(8) as ex:
+        return list(ex.map(lambda n: norm(h) if (h := _search(n)) else None, names))
+
+
 _FILLER = {"inc", "ag", "se", "sa", "nv", "plc", "corp", "corporation", "co", "company", "the", "ltd", "group",
            "holding", "holdings", "ucits", "etf", "acc", "dist", "usd", "eur", "class", "cl", "a", "b", "c",
            "registered", "shares", "reg", "shs", "namens", "aktien", "aktiengesellschaft", "1c", "on"}

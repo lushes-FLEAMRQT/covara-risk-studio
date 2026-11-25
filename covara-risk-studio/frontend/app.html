@@ -49,13 +49,13 @@
     <div class="two">
       <div class="panel src-card">
         <div class="ph"><h3>Depot importieren</h3></div>
-        <p class="mut">Broker-Export, Depotauszug oder Screenshot. Claude liest die Positionen aus, Kurse kommen von Yahoo Finance. Aktien und ETFs aller Börsen.</p>
+        <p class="mut">Broker-Export als CSV oder Excel. Covara erkennt die Spalten (Name, ISIN, Ticker, Stückzahl) selbst, Kurse kommen von Yahoo Finance. Aktien und ETFs aller Börsen.</p>
         <label class="drop" id="imp-drop" for="imp-f"><input id="imp-f" type="file" multiple accept=".csv,.txt,.tsv,.xlsx,.xlsm,.pdf,.png,.jpg,.jpeg,.webp,.gif">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-          <b>Dateien wählen</b><span>oder hierher ziehen</span><span class="small">CSV, Excel, PDF, PNG, JPG · bis 5 Dateien, je 10 MB</span></label>
-        <p class="small bsp">Beispieldateien zum Testen: <a href="/static/beispiele/depot-vorlage.csv" download>CSV-Vorlage</a> · <a href="/static/beispiele/depot-tabelle.xlsx" download>Excel</a> · <a href="/static/beispiele/depotauszug.pdf" download>PDF-Depotauszug</a> · <a href="/static/beispiele/depot-screenshot.png" download>Screenshot</a></p>
+          <b>Dateien wählen</b><span>oder hierher ziehen</span><span class="small">CSV oder Excel · bis 5 Dateien, je 10 MB · PDF und Bilder folgen</span></label>
+        <p class="small bsp">Beispieldateien zum Testen: <a href="/static/beispiele/depot-vorlage.csv" download>CSV-Vorlage</a> · <a href="/static/beispiele/depot-tabelle.xlsx" download>Excel</a></p>
         <ul class="imp-list" id="imp-list"></ul>
-        <button class="btn" id="imp-go" style="justify-self:start" disabled>Mit Claude auslesen</button>
+        <button class="btn" id="imp-go" style="justify-self:start" disabled>Depot auslesen</button>
         <div class="err" id="imp-err" role="alert"></div>
       </div>
       <div class="panel src-card">
@@ -207,8 +207,16 @@
   <p class="small" id="imp-sum" aria-live="polite"></p>
   <ul class="imp-warn small" id="imp-warn"></ul>
   <div class="scroll"><table class="tbl impt"><thead><tr><th class="l">Wertpapier</th><th class="l">Yahoo-Symbol</th><th>Stück</th><th class="hide-s">Kurs</th><th>Wert</th><th class="l">Status</th><th><span class="sr">Entfernen</span></th></tr></thead><tbody id="imp-t"></tbody></table></div>
-  <button type="button" class="btn gh sm" id="imp-add">Zeile hinzufügen</button>
+  <div class="imp-act"><button type="button" class="btn gh sm" id="imp-add">Zeile hinzufügen</button><button type="button" class="btn gh sm" id="imp-remap" hidden>Spalten anders zuordnen</button></div>
   <div class="dlg-foot"><span id="imp-tot"></span><button type="button" class="btn gh" id="imp-cancel">Abbrechen</button><button type="button" class="btn" id="imp-ok" disabled>Übernehmen</button></div>
+</dialog>
+
+<dialog class="dlg" id="map-dlg" aria-labelledby="map-h">
+  <div class="ph"><h3 id="map-h">Spalten zuordnen</h3><button type="button" class="x" id="map-x" aria-label="Schließen">×</button></div>
+  <p class="small">Sag Covara, welche Spalte was enthält. Nötig sind die Stückzahl und mindestens eins von Name, ISIN oder Ticker. Zeilen ohne ISIN und Ticker sucht Covara über den Namen bei Yahoo Finance.</p>
+  <div id="map-b"></div>
+  <div class="err" id="map-err" role="alert"></div>
+  <div class="dlg-foot"><span></span><button type="button" class="btn gh" id="map-cancel">Abbrechen</button><button type="button" class="btn" id="map-ok">Weiter zur Prüfung</button></div>
 </dialog>
 </div>
 

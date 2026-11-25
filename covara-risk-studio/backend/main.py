@@ -5,20 +5,21 @@ Start (im Ordner covara/):
 """
 from __future__ import annotations
 
+import json
 import secrets
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")  # Schlüssel wie ANTHROPIC_API_KEY, nur serverseitig
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")  # Schlüssel (z. B. GEMINI_API_KEY), nur serverseitig
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .data import MACRO, UNIVERSE, DataError, events, history, random_tickers, resolve
-from .importer import ReadError, extract
+from .data import MACRO, UNIVERSE, DataError, events, history, random_tickers, resolve, search_names
+from .importer import FIELDS, ReadError, guess, load, positions
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 COOKIE = "covara_session"
@@ -150,25 +151,97 @@ def api_resolve(body: ResolveIn, request: Request):
     return yahoo(lambda: resolve([i.model_dump() for i in body.items]))
 
 
-@app.post("/api/import")
-def api_import(request: Request, files: list[UploadFile] = File(...)):
-    """Claude liest Positionen aus CSV, Excel, PDF oder Bildern; danach Abgleich mit Yahoo Finance."""
-    need_login(request)
-    raw = [(f.filename or "Datei", f.content_type or "", f.file.read()) for f in files]
+MAX_POSITIONS = 60
+
+
+def _show(v) -> str:
+    if isinstance(v, float):
+        return f"{v:.6f}".rstrip("0").rstrip(".").replace(".", ",")
+    return str(v)
+
+
+def _mapping(raw: str | None) -> dict:
+    """Zuordnung aus dem Browser: {"datei.csv": {"name": 0, "isin": 2, "ticker": null, "qty": 3}}."""
+    if not raw:
+        return {}
     try:
-        data = extract(raw)
+        m = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(422, "Die Spalten-Zuordnung ist ungültig.")
+    ok = lambda v: v is None or (isinstance(v, int) and v >= 0)
+    return {f: {k: v.get(k) for k in FIELDS if ok(v.get(k))} for f, v in m.items() if isinstance(v, dict)}
+
+
+@app.post("/api/import")
+def api_import(request: Request, files: list[UploadFile] = File(...), mapping: str | None = Form(None)):
+    """CSV/Excel lesen, Spalten erkennen (oder Zuordnung aus dem Browser nutzen), danach Abgleich mit Yahoo Finance.
+
+    Ist die Erkennung unsicher und kommt keine Zuordnung mit, gibt es nur die Tabellen-Vorschau (need_map = true).
+    """
+    need_login(request)
+    given = _mapping(mapping)
+    try:
+        tables, warnings = load([(f.filename or "Datei", f.file.read()) for f in files])
     except ReadError as e:
         raise HTTPException(422, str(e))
-    pos = [p for p in data.get("positions", []) if (p.get("symbol") or p.get("isin"))]
-    checked = yahoo(lambda: resolve([{"symbol": p.get("symbol"), "isin": p.get("isin")} for p in pos])) if pos else []
-    def note(p, c):
+
+    info, pos, skipped = [], [], []
+    for t in tables:
+        auto, sure = guess(t)
+        m = given.get(t["file"]) or auto
+        info.append({"file": t["file"], "columns": t["columns"], "mapping": m, "sure": sure or t["file"] in given,
+                     "preview": [[_show(c) for c in r] for r in t["rows"][:6]], "n": len(t["rows"])})
+        if m.get("qty") is None or not any(m.get(f) is not None for f in ("name", "isin", "ticker")):
+            continue
+        p, s = positions(t, m)
+        pos += p
+        skipped += s
+    need_map = any(not x["sure"] for x in info)
+    if need_map:
+        return {"need_map": True, "tables": info, "rows": [], "warnings": warnings, "skipped": []}
+    if len(pos) > MAX_POSITIONS:
+        warnings.append(f"Nur die ersten {MAX_POSITIONS} von {len(pos)} Positionen übernommen.")
+        pos = pos[:MAX_POSITIONS]
+
+    # Zeilen nur mit Namen: Symbol über die Yahoo-Suche finden
+    todo = [k for k, p in enumerate(pos) if not (p["symbol"] or p["isin"])]
+    found = yahoo(lambda: search_names([pos[k]["name"] for k in todo])) if todo else []
+    searched = set()
+    for k, hit in zip(todo, found):
+        if hit:
+            pos[k]["symbol"] = hit
+            searched.add(k)
+
+    checked = yahoo(lambda: resolve([{"symbol": p["symbol"], "isin": p["isin"]} for p in pos])) if pos else []
+
+    # Rückfall: Ticker/ISIN nicht gefunden (z. B. "ULVR" ohne Börsen-Endung) → über den Namen suchen
+    miss = [k for k, c in enumerate(checked)
+            if not c["symbol"] or c["reason"] == "Bei Yahoo Finance nicht gefunden"
+            if k not in searched and pos[k]["name"] not in (pos[k]["symbol"], pos[k]["isin"])]
+    if miss:
+        hits = yahoo(lambda: search_names([pos[k]["name"] for k in miss]))
+        again = [(k, h) for k, h in zip(miss, hits) if h]
+        if again:
+            redo = yahoo(lambda: resolve([{"symbol": h, "isin": None} for _, h in again]))
+            for (k, _), c in zip(again, redo):
+                if c["ok"]:
+                    checked[k] = c
+                    searched.add(k)
+
+    def note(k, p, c):
         if c.get("fixed_from"):
             return f"Symbol {c['fixed_from']} passte nicht zur ISIN, ersetzt durch {c['symbol']}"
-        return p.get("note")
-    rows = [{**c, "name_file": p["name"], "isin": p.get("isin"), "quantity": p.get("quantity"), "note": note(p, c)}
-            for p, c in zip(pos, checked)]
-    return {"rows": rows, "warnings": data.get("warnings", []),
-            "skipped": [p["name"] for p in data.get("positions", []) if not (p.get("symbol") or p.get("isin"))]}
+        if k in searched:
+            return "Symbol aus dem Namen gesucht, bitte prüfen"
+        if p["quantity"] is None:
+            return "Keine Stückzahl erkannt"
+        return None
+
+    rows = [{**c, "name_file": p["name"], "isin": p["isin"], "quantity": p["quantity"], "note": note(k, p, c)}
+            for k, (p, c) in enumerate(zip(pos, checked))]
+    if not rows:
+        warnings.append("Keine Wertpapierpositionen gefunden. Stimmt die Spalten-Zuordnung?")
+    return {"need_map": False, "tables": info, "rows": rows, "warnings": warnings, "skipped": skipped}
 
 
 app.mount("/static", StaticFiles(directory=FRONTEND / "static"), name="static")

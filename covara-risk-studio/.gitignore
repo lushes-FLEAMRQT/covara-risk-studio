@@ -1,0 +1,12 @@
+# Geheime Schlüssel – niemals zu GitHub
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# System
+.DS_Store
