@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .data import MACRO, UNIVERSE, DataError, events, history, random_tickers, resolve, search_names
+from . import gemini
 from .importer import FIELDS, ReadError, guess, load, positions
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
@@ -172,18 +173,26 @@ def _mapping(raw: str | None) -> dict:
     return {f: {k: v.get(k) for k in FIELDS if ok(v.get(k))} for f, v in m.items() if isinstance(v, dict)}
 
 
+@app.get("/api/features")
+def api_features(request: Request):
+    """Was dieser Server kann: Gemini-Import nur mit GEMINI_API_KEY."""
+    need_login(request)
+    return {"gemini": gemini.available()}
+
+
 @app.post("/api/import")
 def api_import(request: Request, files: list[UploadFile] = File(...), mapping: str | None = Form(None)):
-    """CSV/Excel lesen, Spalten erkennen (oder Zuordnung aus dem Browser nutzen), danach Abgleich mit Yahoo Finance.
+    """CSV/Excel lesen und Spalten erkennen (oder Zuordnung aus dem Browser nutzen), PDF/Bilder über Gemini, danach Yahoo-Abgleich.
 
     Ist die Erkennung unsicher und kommt keine Zuordnung mit, gibt es nur die Tabellen-Vorschau (need_map = true).
     """
     need_login(request)
     given = _mapping(mapping)
     try:
-        tables, warnings = load([(f.filename or "Datei", f.file.read()) for f in files])
+        tables, docs = load([(f.filename or "Datei", f.file.read()) for f in files])
     except ReadError as e:
         raise HTTPException(422, str(e))
+    warnings: list[str] = []
 
     info, pos, skipped = [], [], []
     for t in tables:
@@ -199,6 +208,17 @@ def api_import(request: Request, files: list[UploadFile] = File(...), mapping: s
     need_map = any(not x["sure"] for x in info)
     if need_map:
         return {"need_map": True, "tables": info, "rows": [], "warnings": warnings, "skipped": []}
+
+    # PDFs und Bilder: Gemini liest die Positionen. Scheitert das, laufen die Tabellen trotzdem weiter.
+    if docs:
+        try:
+            got = gemini.extract(docs)
+            pos += got["positions"]
+            warnings += got["warnings"]
+        except ReadError as e:
+            if not tables:
+                raise HTTPException(422, str(e))
+            warnings.append(f"{', '.join(n for n, _ in docs)}: {e}")
     if len(pos) > MAX_POSITIONS:
         warnings.append(f"Nur die ersten {MAX_POSITIONS} von {len(pos)} Positionen übernommen.")
         pos = pos[:MAX_POSITIONS]
@@ -235,12 +255,12 @@ def api_import(request: Request, files: list[UploadFile] = File(...), mapping: s
             return "Symbol aus dem Namen gesucht, bitte prüfen"
         if p["quantity"] is None:
             return "Keine Stückzahl erkannt"
-        return None
+        return p.get("note")
 
     rows = [{**c, "name_file": p["name"], "isin": p["isin"], "quantity": p["quantity"], "note": note(k, p, c)}
             for k, (p, c) in enumerate(zip(pos, checked))]
     if not rows:
-        warnings.append("Keine Wertpapierpositionen gefunden. Stimmt die Spalten-Zuordnung?")
+        warnings.append("Keine Wertpapierpositionen gefunden." + (" Stimmt die Spalten-Zuordnung?" if tables else ""))
     return {"need_map": False, "tables": info, "rows": rows, "warnings": warnings, "skipped": skipped}
 
 

@@ -608,7 +608,8 @@ $$('#v-lg button').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.
 {const mq=matchMedia('(hover:none)'),hint=()=>$('#v-hint').textContent=mq.matches?'Tippen oder wischen zeigt Werte. Unten das Fenster ziehen, um hineinzuzoomen.':'Fahr über das Diagramm für Werte. Bereich aufziehen zum Vergrößern, Doppelklick setzt zurück. Auch mit Tastatur: Pfeile, + und −.';hint();mq.addEventListener('change',hint)}
 /* ---------- Depot-Import: Dateien → Spalten erkennen (ggf. zuordnen) → Prüfen → Übernehmen ---------- */
 const IMP={files:[],rows:[],seq:0,map:{},tables:[]};
-const ACCEPT=['csv','txt','tsv','xlsx','xlsm','pdf','png','jpg','jpeg','webp','gif'];
+const ACCEPT=['csv','txt','tsv','xlsx','xlsm','pdf','png','jpg','jpeg','webp','heic','heif'],DOCS=['pdf','png','jpg','jpeg','webp','heic','heif'];
+const isDoc=f=>DOCS.includes((f.name.split('.').pop()||'').toLowerCase());
 const FLD=[['name','Name'],['isin','ISIN'],['ticker','Ticker / Symbol'],['qty','Stückzahl']];
 const e2=v=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
 const kb=n=>n<1048576?`${Math.max(1,Math.round(n/1024))} KB`:`${(n/1048576).toFixed(1).replace('.',',')} MB`;
@@ -624,7 +625,7 @@ function addFiles(list){$('#imp-err').textContent='';
 function renderFiles(){$('#imp-list').innerHTML=IMP.files.map((f,i)=>`<li><span>${esc(f.name)}</span><span class="small">${kb(f.size)}</span><button type="button" class="x" data-i="${i}" aria-label="${esc(f.name)} entfernen">×</button></li>`).join('');
  $('#imp-go').disabled=!IMP.files.length||IMP.busy}
 async function runImport(){if(!IMP.files.length||IMP.busy)return;IMP.busy=true;$('#imp-err').textContent='';
- const b=$('#imp-go');b.disabled=true;b.classList.add('wait');b.textContent='Wird ausgelesen …';
+ const b=$('#imp-go');b.disabled=true;b.classList.add('wait');b.textContent=IMP.files.some(isDoc)?'Gemini liest die Dateien …':'Wird ausgelesen …';
  const mo=$('#map-ok');mo.disabled=true;mo.textContent='Wird geprüft …';
  try{const fd=new FormData();IMP.files.forEach(f=>fd.append('files',f));if(Object.keys(IMP.map).length)fd.append('mapping',JSON.stringify(IMP.map));
   const r=await fetch('/api/import',{method:'POST',body:fd});
@@ -683,7 +684,10 @@ async function acceptImport(){const m=new Map();
   $('#imp-dlg').close();IMP.files=[];renderFiles();location.hash='portfolio'}
  catch(e){$('#imp-sum').textContent=e.message}
  finally{ok.textContent='Übernehmen';sumCheck()}}
-function bindImport(){const fi=$('#imp-f'),dz=$('#imp-drop');
+/* Gemini nur, wenn der Server einen Schlüssel hat; Hinweis zum Datenschutz */
+async function features(){let g=false;try{g=(await api('/api/features')).gemini}catch(e){}const n=$('#imp-gem');n.hidden=false;
+ n.textContent=g?'PDF und Screenshots liest Google Gemini (Gratis-Version). Google darf diese Inhalte zur Verbesserung seiner Produkte nutzen: Schwärze vorher Name, Adresse und Depotnummer.':'PDF und Screenshots sind auf diesem Server nicht eingerichtet. CSV und Excel funktionieren.'}
+function bindImport(){features();const fi=$('#imp-f'),dz=$('#imp-drop');
  fi.addEventListener('change',()=>{addFiles(fi.files);fi.value=''});
  ['dragenter','dragover'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add('on')}));
  ['dragleave','drop'].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.remove('on')}));

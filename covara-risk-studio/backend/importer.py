@@ -17,7 +17,7 @@ MAX_FILES = 5
 MAX_ROWS = 500
 FIELDS = ("name", "isin", "ticker", "qty")
 TABLE_EXT = {".csv", ".txt", ".tsv", ".xlsx", ".xlsm"}
-LATER_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif"}  # kommt mit Schritt 2 (Gemini)
+DOC_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif"}  # liest Gemini (backend/gemini.py)
 
 ISIN_RE = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}[0-9]$")
 
@@ -211,25 +211,23 @@ def positions(t: dict, m: dict) -> tuple[list[dict], list[str]]:
     return out, skipped
 
 
-def load(files: list[tuple[str, bytes]]) -> tuple[list[dict], list[str]]:
-    """Dateien prüfen und lesen. Gibt (Tabellen je Datei, Hinweise) zurück; PDF/Bilder → Hinweis."""
+def load(files: list[tuple[str, bytes]]) -> tuple[list[dict], list[tuple[str, bytes]]]:
+    """Dateien prüfen und aufteilen: Tabellen (CSV/Excel, hier gelesen) und Dokumente (PDF/Bilder, für Gemini)."""
     if not files:
         raise ReadError("Keine Datei ausgewählt.")
     if len(files) > MAX_FILES:
         raise ReadError(f"Höchstens {MAX_FILES} Dateien auf einmal.")
-    tables, notes = [], []
+    tables, docs = [], []
     for name, raw in files:
         ext = os.path.splitext(name.lower())[1]
         if not raw:
             raise ReadError(f"{name} ist leer.")
         if len(raw) > MAX_BYTES:
             raise ReadError(f"{name} ist größer als 10 MB.")
-        if ext in LATER_EXT:
-            notes.append(f"{name}: PDF und Bilder kommen bald. Bitte vorerst CSV oder Excel nutzen.")
-            continue
-        if ext in (".heic", ".heif"):
-            raise ReadError(f"{name}: HEIC-Fotos werden nicht unterstützt.")
-        tables.append({"file": name, **read_table(name, raw)})
-    if not tables:
-        raise ReadError(" ".join(notes) or "Keine Tabelle gefunden.")
-    return tables, notes
+        if ext in DOC_EXT:
+            docs.append((name, raw))
+        elif ext == ".gif":
+            raise ReadError(f"{name}: GIF wird nicht unterstützt. Bitte als PNG oder JPG speichern.")
+        else:
+            tables.append({"file": name, **read_table(name, raw)})
+    return tables, docs

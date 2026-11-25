@@ -10,7 +10,7 @@ Im Projektordner (nach dem Entpacken heißt er `covara-risk-studio`):
 cd covara-risk-studio
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-cp .env.example .env    # optional, derzeit ist kein Schlüssel nötig
+cp .env.example .env    # optional: GEMINI_API_KEY eintragen (nur für PDF/Screenshots nötig)
 .venv/bin/uvicorn backend.main:app --reload --port 8010
 ```
 
@@ -37,7 +37,7 @@ Bereiche im Studio (Hash in der Adresse):
 
 | Hash | Bereich | Inhalt |
 | --- | --- | --- |
-| `#depot` | Depot laden | Import aus CSV oder Excel (Spalten automatisch erkannt, sonst per Auswahl zugeordnet) oder Demo-Portfolio |
+| `#depot` | Depot laden | Import aus CSV oder Excel (Spalten automatisch erkannt, sonst per Auswahl zugeordnet), PDF oder Screenshot (Google Gemini), oder Demo-Portfolio |
 | `#portfolio` | Portfolio | Urteil gegen einen S&P-500-ETF, die 3 wichtigsten Punkte mit Wirkung in Euro, Übersetzung der Zahlen, Wertverlauf, Risikoklasse, Positionen, Sektoren, Kennzahlen, Drawdown |
 | `#risiko` | Risiko | drei Abschnitte: Verlust (VaR, ES, Histogramm), Aktien (Risikobeiträge, Was-wäre-wenn), Faktoren (Stil-Profil, Euro-Wirkung je Faktor) |
 | `#vola` | Risiko-Wetter | Wetter für heute, 1 Woche, 1 Monat, 3 Monate; Schwankung mit Prognose-Fächer und Terminen; was kommt; Sturmtreiber; Markt gegen Modell (VIX); Trefferquote; VaR mit Prognose |
@@ -100,6 +100,10 @@ unter „Für Profis“. Alte Links funktionieren weiter: `#uebersicht` und `#ke
   Zahlen (`1.234,5` / `1,234.5`) werden verstanden, Summen- und Bargeldzeilen übersprungen. Ist die Erkennung unsicher,
   ordnet man die Spalten im Browser per Auswahl zu (`mapping` im Formular). Zeilen ohne ISIN/Ticker und nicht gefundene
   Ticker sucht Covara über den Namen bei Yahoo Finance (Hinweis „bitte prüfen“). Danach Prüfliste wie gehabt.
+- **PDF/Screenshot-Import** (`backend/gemini.py`): schickt PDF, PNG, JPG, WEBP oder HEIC an Google Gemini
+  (`gemini-3.5-flash-lite`, Gratis-Kontingent; per `GEMINI_MODEL` änderbar) und bekommt Positionen als JSON nach festem
+  Schema zurück. Nur mit `GEMINI_API_KEY` auf dem Server, sonst eine verständliche Meldung; CSV/Excel gehen immer.
+  Achtung: Im Gratis-Kontingent darf Google die Inhalte zur Verbesserung seiner Produkte nutzen. Die App weist darauf hin.
 - Der Trailer auf der Startseite nutzt ein festes Beispielportfolio mit simulierten Kursen.
 
 Hebel zeigen, was eine Änderung bewirken würde. Das ist keine Anlageberatung.

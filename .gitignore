@@ -1,0 +1,5 @@
+# Test-Screenshots des Browser-Tests (Playwright), nicht committen
+.playwright-mcp/
+
+# macOS-Ordnerdaten
+.DS_Store

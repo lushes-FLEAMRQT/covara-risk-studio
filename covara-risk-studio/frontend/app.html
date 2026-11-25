@@ -49,11 +49,12 @@
     <div class="two">
       <div class="panel src-card">
         <div class="ph"><h3>Depot importieren</h3></div>
-        <p class="mut">Broker-Export als CSV oder Excel. Covara erkennt die Spalten (Name, ISIN, Ticker, Stückzahl) selbst, Kurse kommen von Yahoo Finance. Aktien und ETFs aller Börsen.</p>
-        <label class="drop" id="imp-drop" for="imp-f"><input id="imp-f" type="file" multiple accept=".csv,.txt,.tsv,.xlsx,.xlsm,.pdf,.png,.jpg,.jpeg,.webp,.gif">
+        <p class="mut">Broker-Export als CSV oder Excel, Depotauszug als PDF oder Screenshot. Covara erkennt die Positionen, du prüfst sie vor dem Übernehmen. Kurse kommen von Yahoo Finance.</p>
+        <label class="drop" id="imp-drop" for="imp-f"><input id="imp-f" type="file" multiple accept=".csv,.txt,.tsv,.xlsx,.xlsm,.pdf,.png,.jpg,.jpeg,.webp,.heic,.heif">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-          <b>Dateien wählen</b><span>oder hierher ziehen</span><span class="small">CSV oder Excel · bis 5 Dateien, je 10 MB · PDF und Bilder folgen</span></label>
-        <p class="small bsp">Beispieldateien zum Testen: <a href="/static/beispiele/depot-vorlage.csv" download>CSV-Vorlage</a> · <a href="/static/beispiele/depot-tabelle.xlsx" download>Excel</a></p>
+          <b>Dateien wählen</b><span>oder hierher ziehen</span><span class="small">CSV, Excel, PDF, PNG, JPG · bis 5 Dateien, je 10 MB</span></label>
+        <p class="small bsp">Beispieldateien zum Testen: <a href="/static/beispiele/depot-vorlage.csv" download>CSV-Vorlage</a> · <a href="/static/beispiele/depot-tabelle.xlsx" download>Excel</a> · <a href="/static/beispiele/depotauszug.pdf" download>PDF-Depotauszug</a> · <a href="/static/beispiele/depot-screenshot.png" download>Screenshot</a></p>
+        <p class="small gem" id="imp-gem" hidden></p>
         <ul class="imp-list" id="imp-list"></ul>
         <button class="btn" id="imp-go" style="justify-self:start" disabled>Depot auslesen</button>
         <div class="err" id="imp-err" role="alert"></div>
