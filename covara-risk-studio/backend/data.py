@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -106,10 +107,26 @@ def meta(symbols: list[str]) -> dict[str, dict]:
             todo.append(s)
 
     def fetch(s):
+        # .info wird von Yahoo oft gedrosselt (vor allem auf Servern). Dann: Währung aus fast_info
+        # (gleiche Quelle wie die Kurse), Name und Sektor aus der Yahoo-Suche.
+        t = yf.Ticker(s)
         try:
-            i = yf.Ticker(s).info or {}
+            i = t.info or {}
         except Exception:
             i = {}
+        if not i.get("currency"):
+            try:
+                fi = t.fast_info
+                i = {**i, "currency": fi.currency or "", "quoteType": i.get("quoteType") or fi.quote_type or ""}
+            except Exception:
+                pass
+        if not (i.get("longName") or i.get("shortName")):
+            try:
+                q = next((x for x in yf.Search(s, max_results=5).quotes if x.get("symbol") == s), {})
+            except Exception:
+                q = {}
+            i = {**i, "longName": q.get("longname") or q.get("shortname"),
+                 "sector": i.get("sector") or q.get("sector"), "quoteType": i.get("quoteType") or q.get("quoteType")}
         qt = i.get("quoteType") or ""
         sector = "ETF/Fonds" if qt in FUND_TYPES else SECTOR_DE.get(i.get("sector") or "", "Sonstige")
         return s, {"name": i.get("longName") or i.get("shortName") or s, "sector": sector,
@@ -118,8 +135,9 @@ def meta(symbols: list[str]) -> dict[str, dict]:
     if todo:
         with ThreadPoolExecutor(8) as ex:
             for s, m in ex.map(fetch, todo):
-                with _lock:
-                    _meta[s] = (now, m)
+                if m["currency"]:              # Fehlschläge nicht merken, beim nächsten Mal neu fragen
+                    with _lock:
+                        _meta[s] = (now, m)
                 out[s] = m
     return out
 
@@ -155,6 +173,10 @@ def history(tickers: list[str]) -> dict:
         raise DataError("Jedes Wertpapier darf nur einmal vorkommen.")
 
     info = meta(tickers)
+    nocur = [t for t in tickers if not info[t]["currency"]]
+    if nocur:
+        raise DataError("Yahoo Finance liefert gerade keine Währung für: " + ", ".join(nocur)
+                        + ". Bitte gleich noch einmal laden.")
     fxp = _fx_pairs({info[t]["currency"] for t in tickers} | {"USD"})
     px = _closes(tickers + [MARKET, VIX] + list(set(fxp.values())) + FACTOR_ETFS)
     fx = {c: px.get(p) for c, p in fxp.items()}
@@ -285,7 +307,14 @@ _FILLER = {"inc", "ag", "se", "sa", "nv", "plc", "corp", "corporation", "co", "c
 
 def _same(a: str, b: str) -> bool:
     """Grober Namensvergleich, um ein falsch geschätztes Symbol zu erkennen."""
-    tok = lambda s: {w for w in "".join(c if c.isalnum() else " " for c in s.lower()).split() if w not in _FILLER}
+    words = lambda s: set("".join(c if c.isalnum() else " " for c in s.lower()).split())
+    # Anteilsklassen (1C/1D, Acc/Dist) unterscheiden: gleicher Fonds, aber ganz anderer Kurs
+    cls = lambda w: {re.sub(r"^(accumulating|thesaurierend)$", "acc", re.sub(r"^(dis|distributing|ausschüttend)$", "dist", x))
+                     for x in w if re.fullmatch(r"\d[cd]|acc|dist|dis|accumulating|distributing|thesaurierend|ausschüttend", x)}
+    ca, cb = cls(words(a)), cls(words(b))
+    if ca and cb and ca != cb:
+        return False
+    tok = lambda s: {w for w in words(s) if w not in _FILLER}
     x, y = tok(a), tok(b)
     if not x or not y:
         return True
@@ -331,7 +360,10 @@ def resolve(items: list[dict]) -> list[dict]:
         if cand:
             names = meta(list({syms[k] for k in cand} | set(cand.values())))
             for k, h in cand.items():
-                if not _same(names[syms[k]]["name"], names[h]["name"]):
+                a, b = names[syms[k]]["name"], names[h]["name"]
+                if a in (syms[k], "") or b in (h, ""):   # Name unbekannt: nichts ersetzen, nur weil Yahoo hakt
+                    continue
+                if not _same(a, b):
                     more = _closes([h])
                     if more.get(h) is not None:
                         px.update(more)
@@ -356,7 +388,9 @@ def resolve(items: list[dict]) -> list[dict]:
             m = info[sym]
             cur = m["currency"]
             r.update(name=m["name"], sector=m["sector"], currency=cur, days=len(ser))
-            if cur in fx and fx[cur] is None:
+            if not cur:
+                r["reason"] = "Währung bei Yahoo gerade nicht abrufbar, bitte erneut prüfen"
+            elif cur in fx and fx[cur] is None:
                 r["reason"] = f"Kein Wechselkurs für {cur}"
             else:
                 r["last"] = round(float(_to_eur(ser, cur, fx).iloc[-1]), 2)
